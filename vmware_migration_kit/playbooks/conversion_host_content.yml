@@ -8,11 +8,7 @@
     - libvirt
     - virt-v2v
     - qemu-kvm
-
-- name: Make sure Openstack client is installed
-  ansible.builtin.pip:
-    name: python3-openstackclient
-    state: present
+    - python3-openstackclient
 
 - name: Set Openstack credentials clouds.yaml file
   ansible.builtin.copy:

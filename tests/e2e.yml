@@ -1,0 +1,43 @@
+- name: Make sure conversion hosts are cleaned up
+  ansible.builtin.import_playbook:
+    "vmware_migration_kit/playbooks/delete_os_conversion_host.yml"
+  when: deploy_conversion_host|default(false)|bool
+
+- name: Deploy conversion hosts
+  ansible.builtin.import_playbook:
+    "vmware_migration_kit/playbooks/deploy_conversion_hosts.yml"
+  when: deploy_conversion_host|default(false)|bool
+
+- name: Make sure conversion host is correctly configured
+  hosts: conversion_host
+  tasks:
+    - name: check independent
+      ansible.builtin.import_tasks: "vmware_migration_kit/playbooks/conversion_host_content.yml"
+      when: already_deploy_conversion_host|default(false)|bool
+
+# TODO: move the following tasks to specific modules
+- name: Transfert VMs from VMware to Openstack
+  ansible.builtin.shell: |
+    virt-v2v -i vmx -it ssh "ssh://root@{{ esxi_host }}/vmfs/volumes/datastore1/{{ item }}/{{ item }}.vmx" -o local -os /var/tmp
+  with_items: "{{ vm_list }}"
+
+- name: Copy volumes to conversion host
+  ansible.builtin.shell: |
+    scp -r  /var/tmp/{{ item }} {{ conv_host_user }}@{{ conv_host }}:/var/tmp
+  with_items: "{{ vm_list }}"
+
+- name: Convert VMs to Openstack
+  hosts: conversion_host
+  tasks:
+    - name: Convert VMs to Openstack
+      ansible.builtin.shell: |
+        virt-v2v  -i disk /var/tmp/{{ item }}-sda  -o openstack  -oo server-id={{ already_deploy_conversion_host_id }} -v -x
+      with_items: "{{ vm_list }}"
+  
+- name: Create VMs in Openstack
+  hosts: conversion_host
+  tasks:
+    - name: Create VMs in Openstack
+      ansible.builtin.shell: |
+        openstack server create --flavor {{ dst_flavor }} --image {{ item }} --network {{ dst_public_network }} --security-group default {{ item }}
+      with_items: "{{ vm_list }}"

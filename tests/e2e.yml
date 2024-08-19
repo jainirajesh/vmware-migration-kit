@@ -27,7 +27,7 @@
 
     - name: Copy volumes to conversion host
       ansible.builtin.shell: |
-        scp -r  /var/tmp/{{ item }} {{ conv_host_user }}@{{ conv_host }}:/var/tmp
+        scp -r  /var/tmp/{{ item }}-sda {{ conv_host_user }}@{{ conv_host }}:/var/tmp
       with_items: "{{ vm_list }}"
 
 - name: Convert VMs to Openstack
@@ -43,8 +43,17 @@
 - name: Create VMs in Openstack
   hosts: conversion_host
   tasks:
+    - name: Get volume uuid
+      ansible.builtin.shell: |
+        export OS_CLOUD={{ dst_cloud }}
+        openstack volume list 2>/dev/null | grep {{ item }}-sda | awk '{print $2}'
+      with_items: "{{ vm_list }}"
+      register: volume_uuid
+
     - name: Create VMs in Openstack
       ansible.builtin.shell: |
         export OS_CLOUD={{ dst_cloud }}
-        openstack server create --flavor {{ dst_flavor }} --image {{ item }} --network {{ dst_public_network }} --security-group default {{ item }}
+        openstack server create --flavor {{ dst_flavor }} --image {{ volume_uuid }} --network {{ dst_public_network }} --security-group default {{ item }}
       with_items: "{{ vm_list }}"
+
+# Cleanup

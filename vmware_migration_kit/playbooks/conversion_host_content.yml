@@ -1,18 +1,12 @@
-- name: Make sure required package are installed
-  ansible.builtin.package:
-    name: "{{ item }}"
-    state: present
-  with_items:
-    - python3
-    - python3-pip
-    - libvirt
-    - virt-v2v
-    - qemu-kvm
-    - python3-openstackclient
-
-- name: Set Openstack credentials clouds.yaml file
-  ansible.builtin.copy:
-    src: "{{ os_migrate_clouds_path|default(os_migrate_data_dir ~ '/clouds.yaml') }}"
-    dest: "~/.config/openstack/clouds.yaml"
-
-    
+- hosts: conversion_hosts
+  environment:
+    OS_CLIENT_CONFIG_FILE: "{{ os_migrate_clouds_path|default(os_migrate_data_dir ~ '/clouds.yaml') }}"
+  any_errors_fatal: true
+  tasks:
+    - name: install the conversion host content
+      ansible.builtin.include_role:
+        name: os_migrate.vmware_migration_kit.conversion_host_content
+      when: os_migrate_conversion_host_content_install|default(true)|bool
+  vars:
+    ansible_become_user: root
+    ansible_become: true

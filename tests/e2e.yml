@@ -1,20 +1,24 @@
-- name: Make sure conversion hosts are cleaned up
-  ansible.builtin.import_playbook:
-    "vmware_migration_kit/playbooks/delete_os_conversion_host.yml"
-  when: deploy_conversion_host|default(false)|bool
-
-- name: Deploy conversion hosts
-  ansible.builtin.import_playbook:
-    "vmware_migration_kit/playbooks/deploy_conversion_hosts.yml"
-  when: deploy_conversion_host|default(false)|bool
-
-- name: Make sure conversion host is correctly configured
-  hosts: conversion_host
+---
+- name: Conversion host
+  hosts: migrator
   tasks:
-    - name: check dependencies
-      become: true
-      ansible.builtin.import_tasks: "vmware_migration_kit/playbooks/conversion_host_content.yml"
-      when: already_deploy_conversion_host|default(false)|bool
+  - name: Make sure conversion hosts are cleaned up
+    ansible.builtin.import_playbook:
+      "vmware_migration_kit/playbooks/delete_os_conversion_host.yml"
+    when: deploy_conversion_host|default(false)|bool
+
+  - name: Deploy conversion hosts
+    ansible.builtin.import_playbook:
+      "vmware_migration_kit/playbooks/deploy_conversion_hosts.yml"
+    when: deploy_conversion_host|default(false)|bool
+
+  - name: Make sure conversion host is correctly configured
+    hosts: conversion_host
+    tasks:
+      - name: check dependencies
+        become: true
+        ansible.builtin.import_tasks: "vmware_migration_kit/playbooks/conversion_host_content.yml"
+        when: already_deploy_conversion_host|default(false)|bool
 
 # TODO: move the following tasks to specific modules
 - name: Migrate vmware virtual machines
@@ -53,7 +57,18 @@
     - name: Create VMs in Openstack
       ansible.builtin.shell: |
         export OS_CLOUD={{ dst_cloud }}
-        openstack server create --flavor {{ dst_flavor }} --image {{ volume_uuid }} --network {{ dst_public_network }} --security-group default {{ item }}
+        openstack server create --flavor {{ dst_flavor }} --image {{ volume_uuid }} --network {{ dst_public_network }} --security-group default {{ item }}-esxi
       with_items: "{{ vm_list }}"
 
 # Cleanup
+    - name: Remove instances
+      ansible.builtin.shell: |
+        export OS_CLOUD={{ dst_cloud }}
+        openstack server delete {{ item }}-esxi
+      with_items: "{{ vm_list }}"
+
+    - name: Remove volumes
+      ansible.builtin.shell: |
+        export OS_CLOUD={{ dst_cloud }}
+        openstack volume delete {{ item }}-sda
+      with_items: "{{ vm_list }}"

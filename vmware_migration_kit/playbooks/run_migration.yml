@@ -75,7 +75,5 @@
     - name: Delete Cinder Volume
       ansible.builtin.shell: |
         export OS_CLOUD={{ dst_cloud }}
-        volume_id=$(openstack volume list 2>/dev/null | grep {{ vm_name }}-sda | awk '{print $2}')
-        echo $volume_id
-        openstack volume delete $volume_id
-      when: delete_os_instance|default(false)|bool
+        openstack volume delete {{ volume_uuid }}
+      when: delete_os_volume|default(true)|bool

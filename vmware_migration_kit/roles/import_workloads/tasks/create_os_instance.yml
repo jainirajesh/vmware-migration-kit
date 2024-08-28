@@ -17,10 +17,14 @@
     openstack volume list 2>/dev/null | grep {{ vm_name }}-sda | awk '{print $2}'
   register: volume_uuid
 
+- name: Set fact for volume_uuid
+  set_fact:
+    volume_uuid: "{{ volume_uuid.stdout }}"
+
 - name: Create VM in Openstack
   ansible.builtin.shell: |
     export OS_CLOUD={{ dst_cloud }}
-    openstack server create --flavor {{ dst_flavor }} --volume {{ volume_uuid.stdout }} --network {{ dst_public_network }} --security-group default {{ vm_name }}
+    openstack server create --flavor {{ dst_flavor }} --volume {{ volume_uuid }} --network {{ dst_public_network }} --security-group default {{ vm_name }}
 
 # - name: Create VM in Openstack
 #   openstack.cloud.server:

@@ -20,7 +20,7 @@
 - name: Create VM in Openstack
   ansible.builtin.shell: |
     export OS_CLOUD={{ dst_cloud }}
-    openstack server create --flavor {{ dst_flavor }} --image {{ volume_uuid }} --network {{ dst_public_network }} --security-group default {{ vm_name }}
+    openstack server create --flavor {{ dst_flavor }} --volume {{ volume_uuid.stdout }} --network {{ dst_public_network }} --security-group default {{ vm_name }}
 
 # - name: Create VM in Openstack
 #   openstack.cloud.server:

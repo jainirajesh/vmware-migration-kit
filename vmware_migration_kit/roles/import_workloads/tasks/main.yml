@@ -1,5 +1,5 @@
 ---
 - include_tasks: virt_v2v.yml
   when: os_migrate_virt_v2v|default(true)|bool  
-- include_tasks: create_os_instances.yml
+- include_tasks: create_os_instance.yml
   when: os_migrate_create_os_instances|default(true)|bool

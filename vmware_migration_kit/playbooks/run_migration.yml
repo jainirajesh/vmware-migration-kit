@@ -3,14 +3,22 @@
   hosts: migrator
   tasks:
   - name: Make sure conversion hosts are cleaned up
+    vars:
+      os_migrate_delete_src_conversion_host: false
+      os_migrate_delete_dst_conversion_host: true
     ansible.builtin.import_playbook:
-      "vmware_migration_kit/playbooks/delete_os_conversion_host.yml"
-    when: deploy_conversion_host|default(false)|bool
+      "os_migrate.os_migrate.delete_conversion_hosts.yml"
 
   - name: Deploy conversion hosts
+    vars:
+      os_migrate_deploy_src_conversion_host: false
+      os_migrate_deploy_dst_conversion_host: true
+      os_migrate_link_conversion_host_src: false
+      os_migrate_link_conversion_host_dst: true
+      os_migrate_link_conversion_host_src: false
+      os_migrate_link_conversion_host_dst: true
     ansible.builtin.import_playbook:
-      "vmware_migration_kit/playbooks/deploy_conversion_hosts.yml"
-    when: deploy_conversion_host|default(false)|bool
+      "os_migrate.os_migrate.deploy_conversion_hosts.yml"
 
 - name: Make sure conversion host is correctly configured
   hosts: conversion_host
@@ -18,7 +26,19 @@
     - name: Install the conversion host content
       become: true
       ansible.builtin.import_tasks: "vmware_migration_kit/playbooks/conversion_host_content.yml"
-      when: already_deploy_conversion_host|default(false)|bool
+      when: not already_deploy_conversion_host|default(false)|bool
+
+- name: Make sure already deployed conversion host is set up correctly
+  hosts: migrator
+  tasks:
+  - name: Make sure conversion host is correctly configured
+    hosts: conversion_host
+    tasks:
+      - name: Install the conversion host content
+        become: true
+        ansible.builtin.import_tasks: "vmware_migration_kit/playbooks/conversion_host_content.yml"
+        when: already_deploy_conversion_host|default(false)|bool
+
 
 # Gather information from vmware (networks and flavors)
 - name: Export vmware metadata

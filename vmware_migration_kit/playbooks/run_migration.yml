@@ -62,3 +62,20 @@
         name: os_migrate.vmware_migration_kit.import_workloads
 
 # Cleanup
+# To be implement outside of this playbook
+- name: Clean up
+  hosts: migrator
+  tasks:
+    - name: Delete OS instance
+      ansible.builtin.shell: |
+        export OS_CLOUD={{ dst_cloud }}
+        openstack server delete {{ vm_name }}
+      when: delete_os_instance|default(true)|bool
+
+    - name: Delete Cinder Volume
+      ansible.builtin.shell: |
+        export OS_CLOUD={{ dst_cloud }}
+        volume_id=$(openstack volume list 2>/dev/null | grep {{ vm_name }}-sda | awk '{print $2}')
+        echo $volume_id
+        openstack volume delete $volume_id
+      when: delete_os_instance|default(false)|bool

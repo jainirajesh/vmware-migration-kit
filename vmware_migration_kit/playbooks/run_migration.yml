@@ -1,44 +1,51 @@
 ---
-- name: Deploy conversion host
+- name: Setup requirements
   hosts: migrator
   tasks:
-  - name: Make sure conversion hosts are cleaned up
-    vars:
-      os_migrate_delete_src_conversion_host: false
-      os_migrate_delete_dst_conversion_host: true
-    ansible.builtin.import_playbook:
-      "os_migrate.os_migrate.delete_conversion_hosts.yml"
+    - name: Copy clouds.yaml to os-migrate data dir
+      ansible.builtin.copy:
+        src: "{{ lookup('env', 'HOME') }}/.config/openstack/clouds.yaml"
+        dest: "{{ os_migrate_data_dir }}"
+        mode: '0644'
 
-  - name: Deploy conversion hosts
-    vars:
-      os_migrate_deploy_src_conversion_host: false
-      os_migrate_deploy_dst_conversion_host: true
-      os_migrate_link_conversion_host_src: false
-      os_migrate_link_conversion_host_dst: true
-      os_migrate_link_conversion_host_src: false
-      os_migrate_link_conversion_host_dst: true
-    ansible.builtin.import_playbook:
-      "os_migrate.os_migrate.deploy_conversion_hosts.yml"
+- name: Deploy conversion host
+  block:
+    - name: Deploy conversion host
+      hosts: migrator
+      tasks:
+      - name: Make sure conversion hosts are cleaned up
+        vars:
+          os_migrate_delete_src_conversion_host: false
+          os_migrate_delete_dst_conversion_host: true
+        ansible.builtin.import_playbook:
+          "os_migrate.os_migrate.delete_conversion_hosts.yml"
 
-- name: Make sure conversion host is correctly configured
+      - name: Deploy conversion hosts
+        vars:
+          os_migrate_deploy_src_conversion_host: false
+          os_migrate_deploy_dst_conversion_host: true
+          os_migrate_link_conversion_host_src: false
+          os_migrate_link_conversion_host_dst: true
+          os_migrate_link_conversion_host_src: false
+          os_migrate_link_conversion_host_dst: true
+        ansible.builtin.import_playbook:
+          "os_migrate.os_migrate.deploy_conversion_hosts.yml"
+
+    - name: Make sure conversion host is correctly configured
+      hosts: conversion_host
+      tasks:
+        - name: Install the conversion host content
+          become: true
+          ansible.builtin.import_tasks: "playbooks/conversion_host_content.yml"
+  when: not already_deploy_conversion_host|default(false)|bool
+
+- name: Make sure already deployed conversion host is set up correctly
   hosts: conversion_host
   tasks:
     - name: Install the conversion host content
       become: true
-      ansible.builtin.import_tasks: "vmware_migration_kit/playbooks/conversion_host_content.yml"
-      when: not already_deploy_conversion_host|default(false)|bool
-
-- name: Make sure already deployed conversion host is set up correctly
-  hosts: migrator
-  tasks:
-  - name: Make sure conversion host is correctly configured
-    hosts: conversion_host
-    tasks:
-      - name: Install the conversion host content
-        become: true
-        ansible.builtin.import_tasks: "vmware_migration_kit/playbooks/conversion_host_content.yml"
-        when: already_deploy_conversion_host|default(false)|bool
-
+      ansible.builtin.import_tasks: "playbooks/conversion_host_content.yml"
+      when: already_deploy_conversion_host|default(false)|bool
 
 # Gather information from vmware (networks and flavors)
 - name: Export vmware metadata
@@ -48,30 +55,13 @@
       ansible.builtin.include_role:
         name: os_migrate.vmware_migration_kit.export_metadata
 
-# Map metadata to create destination flavor
-    - name: get best match
-      os_migrate.vmware_migration_kit.best_match_flavor:
-        cloud: "{{ dst_cloud }}"
-        guest_info_path: /opt/os-migrate/guest_info_ubuntu-2.json
-        disk_info_path: /opt/os-migrate/disk_info_ubuntu-2.json
-      register: best_flavor
-      when: use_existing_flavor|default(true)|bool
-
-    - name: export flavor
-      os_migrate.vmware_migration_kit.export_flavor:
-        guest_info_path: /opt/os-migrate/guest_info_ubuntu-2.json
-        disk_info_path: /opt/os-migrate/disk_info_ubuntu-2.json
-        flavor_name: "{{ flavor_name }}"
-        path: /opt/os-migrate/flavors.yml
-      when: use_existing_flavor|default(false)|bool
-
-    - name: import flavor
+    - name: Convert vmware metadata to openstack flavors
       ansible.builtin.include_role:
-        name: os_migrate.os_migrate.import_flavors
+        name: os_migrate.vmware_migration_kit.export_flavor
       vars:
-        os_migrate_dst_filter_current_project: false
-        os_migrate_src_filter_current_project: false
-      when: use_existing_flavor|default(false)|bool
+        guest_info_path: "{{ os_migrate_data_dir }}/guest_info_{{ vm_name }}.json"
+        disk_info_path: "{{ os_migrate_data_dir }}/disk_info_{{ vm_name }}.json"
+        flavor_name: "{{ flavor_name }}"
 
 # Migrate vmware vms to cinder volumes
 # Create instances in openstack from cinder volumes and vmware metadata
@@ -82,6 +72,17 @@
     - name: Migrate vmware virtual machines
       ansible.builtin.include_role:
         name: os_migrate.vmware_migration_kit.import_workloads
+        os_migrate_create_network_port: false
+        os_migrate_create_os_instance: false
+
+- name: Import vmware virtual machines
+  hosts: migrator
+  tasks:
+    - name: Migrate vmware virtual machines
+      ansible.builtin.include_role:
+        name: os_migrate.vmware_migration_kit.import_workloads
+      vars:
+        os_migrate_virt_v2v: false
 
 # Cleanup
 # To be implement outside of this playbook

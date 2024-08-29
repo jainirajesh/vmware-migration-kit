@@ -49,29 +49,29 @@
         name: os_migrate.vmware_migration_kit.export_metadata
 
 # Map metadata to create destination flavor
-  - name: get best match
-    os_migrate.vmware_migration_kit.best_match_flavor:
-      cloud: "{{ dst_cloud }}"
-      guest_info_path: /opt/os-migrate/guest_info_ubuntu-2.json
-      disk_info_path: /opt/os-migrate/disk_info_ubuntu-2.json
-    register: best_flavor
-    when: use_existing_flavor|default(true)|bool
+    - name: get best match
+      os_migrate.vmware_migration_kit.best_match_flavor:
+        cloud: "{{ dst_cloud }}"
+        guest_info_path: /opt/os-migrate/guest_info_ubuntu-2.json
+        disk_info_path: /opt/os-migrate/disk_info_ubuntu-2.json
+      register: best_flavor
+      when: use_existing_flavor|default(true)|bool
 
-  - name: export flavor
-    os_migrate.vmware_migration_kit.export_flavor:
-      guest_info_path: /opt/os-migrate/guest_info_ubuntu-2.json
-      disk_info_path: /opt/os-migrate/disk_info_ubuntu-2.json
-      flavor_name: "{{ flavor_name }}"
-      path: /opt/os-migrate/flavors.yml
-    when: use_existing_flavor|default(false)|bool
+    - name: export flavor
+      os_migrate.vmware_migration_kit.export_flavor:
+        guest_info_path: /opt/os-migrate/guest_info_ubuntu-2.json
+        disk_info_path: /opt/os-migrate/disk_info_ubuntu-2.json
+        flavor_name: "{{ flavor_name }}"
+        path: /opt/os-migrate/flavors.yml
+      when: use_existing_flavor|default(false)|bool
 
-  - name: import flavor
-    ansible.builtin.include_role:
-      name: os_migrate.os_migrate.import_flavors
-    vars:
-      os_migrate_dst_filter_current_project: false
-      os_migrate_src_filter_current_project: false
-    when: use_existing_flavor|default(false)|bool
+    - name: import flavor
+      ansible.builtin.include_role:
+        name: os_migrate.os_migrate.import_flavors
+      vars:
+        os_migrate_dst_filter_current_project: false
+        os_migrate_src_filter_current_project: false
+      when: use_existing_flavor|default(false)|bool
 
 # Migrate vmware vms to cinder volumes
 # Create instances in openstack from cinder volumes and vmware metadata

@@ -1,0 +1,32 @@
+---
+- name: Load metadata files
+  set_fact:
+    vm_info: "{{ lookup('file', '{{ os_migrate_data_dir }}/vm_info_{{ vm_name }}.json') | from_json }}"
+    network_info: "{{ lookup('file', '{{ os_migrate_data_dir }}/network_info_{{ vm_name }}.json') | from_json }}"
+    guest_info: "{{ lookup('file', '{{ os_migrate_data_dir }}/guest_info_{{ vm_name }}.json') | from_json }}"
+    disk_info: "{{ lookup('file', '{{ os_migrate_data_dir }}/disk_info_{{ vm_name }}.json') | from_json }}"
+
+- name: Get best matches for flavors
+  os_migrate.vmware_migration_kit.best_match_flavor:
+    cloud: psi-rhos-upgrades-ci
+    guest_info_path: "{{ os_migrate_data_dir }}/guest_info_{{ vm_name }}.json"
+    disk_info_path: "{{ os_migrate_data_dir }}/disk_info_{{ vm_name }}.json "
+  register: flavor_name_or_uuid.openstack_flavor_uuid
+  when: use_existing_flavor|default(true)|bool
+
+- name: Export flavor
+  os_migrate.vmware_migration_kit.export_flavor:
+    guest_info_path: "{{ os_migrate_data_dir }}/guest_info_{{ vm_name }}.json"
+    disk_info_path: "{{ os_migrate_data_dir }}/disk_info_{{ vm_name }}.json"
+    flavor_name: "osm-vmware-{{ vm_name }}"
+    path: "{{ os_migrate_data_dir }}/flavors.yml"
+  when: use_existing_flavor|default(false)|bool
+
+- name: Set falvor name or uuid
+  set_fact:
+    flavor_name_or_uuid: "osm-vmware-{{ vm_name }}"
+  when: use_existing_flavor|default(false)|bool
+
+# TODO:
+# extract network info and create a network map (extract the mac address and vlan id)
+# dump a yaml file for  osm to create the instance

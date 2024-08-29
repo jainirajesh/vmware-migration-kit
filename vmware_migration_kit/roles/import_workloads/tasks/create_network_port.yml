@@ -1,0 +1,43 @@
+---
+# TODO: Turns this into a specific module
+- name: Load network data files
+  set_fact:
+    vm_nics: "{{ lookup('file', '{{ os_migrate_data_dir }}/nics_{{ vm_name }}.json') | from_json }}"
+  when: used_mapped_networks|default(true)|bool
+- name: Load network data files
+  set_fact:
+    vm_nics: "{{ lookup('file', '{{ os_migrate_data_dir }}/macs_{{ vm_name }}.json') | from_json }}"
+  when: used_mapped_networks|default(false)|bool
+
+- name: Create guest nic with expected MAC Address 
+  openstack.cloud.port:
+    cloud: "{{ dst_cloud }}"
+    state: present
+    name: "{{ vm_name }}-NIC-{{ nic_index }}-VLAN-{{ item.vlan }}"
+    network: "{{ item.vlan | string }}"
+    mac_address: "{{ item.mac }}"
+    allowed_address_pairs:
+      - ip_address: 0.0.0.0/0
+        mac_address: "{{ item.mac }}"
+    security_groups: "{{ security_groups }} |default('default') }}"
+  loop: "{{ vm_nics }}"
+  loop_control:
+    index_var: nic_index
+  tags: assemble_network
+
+- name: get available ports
+  openstack.cloud.port_info:
+    cloud: "{{ dst_cloud }}"
+  register: port_info
+  no_log: true
+  tags: assemble_network
+
+- name: extract ports
+  set_fact: 
+    nics: "{{ nics | default([]) + [{ 'port-name': item.name } ] }}"
+  loop: "{{ port_info.ports }}"
+  when: item.name is match(regex)
+  vars:
+    regex: "^{{ vm_name }}-NIC-"
+  no_log: true
+  tags: assemble_network

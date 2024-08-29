@@ -117,7 +117,7 @@ def run_module():
             '_migration_params': {},
             'params': {
                 'description': None,
-                'disk': total_disk_capacity_gb,
+                'disk': int(total_disk_capacity_gb),
                 'ephemeral': 0,
                 'extra_specs': {
                     'aggregate_instance_extra_specs:server_type:aggregate': 'ci'

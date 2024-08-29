@@ -31,7 +31,6 @@
       openstack.cloud.port_info:
         cloud: "{{ dst_cloud }}"
       register: port_info
-      no_log: true
 
     - name: extract ports
       set_fact: 
@@ -40,6 +39,5 @@
       when: item.name is match(regex)
       vars:
         regex: "^{{ vm_name }}-NIC-"
-      no_log: true
   ignore_errors: true
   when: port_creation_allow_by_policy|default(true)|bool

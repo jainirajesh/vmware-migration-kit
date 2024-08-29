@@ -35,6 +35,7 @@
     volumes: "{{ volume_uuid }}"
     security_groups: "{{ security_groups }}"
     flavor: "{{ flavor_name_or_uuid }}"
+  ignore_errors: true
   when: port_creation_allow_by_policy|default(true)|bool
 
 - name: Create VM in Openstack

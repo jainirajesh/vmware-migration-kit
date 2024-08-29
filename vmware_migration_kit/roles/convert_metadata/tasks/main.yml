@@ -11,7 +11,12 @@
     cloud: psi-rhos-upgrades-ci
     guest_info_path: "{{ os_migrate_data_dir }}/guest_info_{{ vm_name }}.json"
     disk_info_path: "{{ os_migrate_data_dir }}/disk_info_{{ vm_name }}.json "
-  register: flavor_name_or_uuid.openstack_flavor_uuid
+  register: flavor_name_or_uuid
+  when: use_existing_flavor|default(true)|bool
+
+- name: Set fact for flavor
+  set_fact:
+    flavor_name_or_uuid: "{{ flavor_name_or_uuid.openstack_flavor_uuid }}"
   when: use_existing_flavor|default(true)|bool
 
 - name: Export flavor

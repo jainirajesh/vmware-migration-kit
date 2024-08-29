@@ -10,23 +10,19 @@
 
     - name: Deploy conversion host
       block:
-        - name: Set variables for cleaning up conversion hosts
-          set_fact:
+        - name: Make sure conversion hosts are cleaned up
+          vars:
             os_migrate_delete_src_conversion_host: false
             os_migrate_delete_dst_conversion_host: true
-
-        - name: Make sure conversion hosts are cleaned up
           ansible.builtin.import_playbook:
             "os_migrate.os_migrate.delete_conversion_hosts.yml"
 
-        - name: Set variables for deploying conversion hosts
-          set_fact:
+        - name: Deploy conversion hosts
+          vars:
             os_migrate_deploy_src_conversion_host: false
             os_migrate_deploy_dst_conversion_host: true
             os_migrate_link_conversion_host_src: false
             os_migrate_link_conversion_host_dst: true
-
-        - name: Deploy conversion hosts
           ansible.builtin.import_playbook:
             "os_migrate.os_migrate.deploy_conversion_hosts.yml"
       when: not already_deploy_conversion_host|default(false)|bool
@@ -48,7 +44,7 @@
 
     - name: Convert vmware metadata to openstack flavors
       ansible.builtin.include_role:
-        name: os_migrate.vmware_migration_kit.export_flavor
+        name: os_migrate.vmware_migration_kit.convert_metadata
       vars:
         guest_info_path: "{{ os_migrate_data_dir }}/guest_info_{{ vm_name }}.json"
         disk_info_path: "{{ os_migrate_data_dir }}/disk_info_{{ vm_name }}.json"

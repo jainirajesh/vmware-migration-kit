@@ -63,7 +63,7 @@
       disk_info_path: /opt/os-migrate/disk_info_ubuntu-2.json
       flavor_name: "{{ flavor_name }}"
       path: /opt/os-migrate/flavors.yml
-    when: create_flavor|default(false)|bool
+    when: use_existing_flavor|default(false)|bool
 
   - name: import flavor
     ansible.builtin.include_role:
@@ -71,8 +71,7 @@
     vars:
       os_migrate_dst_filter_current_project: false
       os_migrate_src_filter_current_project: false
-
-# Map netowrk
+    when: use_existing_flavor|default(false)|bool
 
 # Migrate vmware vms to cinder volumes
 # Create instances in openstack from cinder volumes and vmware metadata

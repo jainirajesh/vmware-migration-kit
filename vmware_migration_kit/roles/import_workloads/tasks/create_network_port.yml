@@ -4,6 +4,7 @@
   set_fact:
     vm_nics: "{{ lookup('file', '{{ os_migrate_data_dir }}/nics_{{ vm_name }}.json') | from_json }}"
   when: used_mapped_networks|default(true)|bool
+
 - name: Load network data files
   set_fact:
     vm_nics: "{{ lookup('file', '{{ os_migrate_data_dir }}/macs_{{ vm_name }}.json') | from_json }}"
@@ -23,14 +24,12 @@
   loop: "{{ vm_nics }}"
   loop_control:
     index_var: nic_index
-  tags: assemble_network
 
 - name: get available ports
   openstack.cloud.port_info:
     cloud: "{{ dst_cloud }}"
   register: port_info
   no_log: true
-  tags: assemble_network
 
 - name: extract ports
   set_fact: 
@@ -40,4 +39,3 @@
   vars:
     regex: "^{{ vm_name }}-NIC-"
   no_log: true
-  tags: assemble_network

@@ -35,7 +35,7 @@
     - name: extract ports
       set_fact: 
         nics: "{{ nics | default([]) + [{ 'port-name': item.name } ] }}"
-      loop: "{{ port_info.ports }}"
+      loop: "{{ port_info.openstack_ports }}"
       when: item.name is match(regex)
       vars:
         regex: "^{{ vm_name }}-NIC-"

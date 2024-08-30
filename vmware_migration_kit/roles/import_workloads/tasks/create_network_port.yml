@@ -1,43 +1,35 @@
 ---
-# TODO: Turns this into a specific module
-- name: Load network data files
-  set_fact:
-    vm_nics: "{{ lookup('file', '{{ os_migrate_data_dir }}/nics_{{ vm_name }}.json') | from_json }}"
-  when: used_mapped_networks|default(true)|bool
-
-- name: Load network data files
-  set_fact:
-    vm_nics: "{{ lookup('file', '{{ os_migrate_data_dir }}/macs_{{ vm_name }}.json') | from_json }}"
-  when: not used_mapped_networks|default(true)|bool
-
-- name: Create nics port for vm
+- name: Create instance ports
   block:
-    - name: Create guest nic with expected MAC Address 
-      openstack.cloud.port:
-        cloud: "{{ dst_cloud }}"
-        state: present
-        name: "{{ vm_name }}-NIC-{{ nic_index }}-VLAN-{{ item.vlan }}"
-        network: "{{ item.vlan | string }}"
-        mac_address: "{{ item.mac }}"
-        allowed_address_pairs:
-          - ip_address: 0.0.0.0/0
-            mac_address: "{{ item.mac }}"
-        security_groups: "{{ security_groups | default('default') }}"
-      loop: "{{ vm_nics }}"
-      loop_control:
-        index_var: nic_index
+    - name: Create network ports
+      os_migrate.vmware_migration_kit.create_network_port:
+        cloud: dst
+        os_migrate_nics_file_path: "{{ os_migrate_data_dir }}/nics_{{ vm_name }}.json"
+        vm_name: "{{ vm_name }}"
+        used_mapped_networks: true
+        security_groups: ["{{ security_groups | default('default') }}"]
+      register: ports_uuid
+      when: used_mapped_networks|default(true)|bool
 
-    - name: get available ports
-      openstack.cloud.port_info:
-        cloud: "{{ dst_cloud }}"
-      register: port_info
+    - name: Create network port
+      os_migrate.vmware_migration_kit.create_network_port:
+        cloud: dst
+        os_migrate_nics_file_path: "{{ os_migrate_data_dir }}/macs_{{ vm_name }}.json"
+        vm_name: "{{ vm_name }}"
+        used_mapped_networks: false
+        security_groups: ["{{ security_groups | default('default') }}"]
+        network_name: "{{ openstack_private_network}}"
+      register: ports_uuid
+      when: not used_mapped_networks|default(true)|bool
 
-    - name: extract ports
-      set_fact: 
-        nics: "{{ nics | default([]) + [{ 'port-name': item.name } ] }}"
-      loop: "{{ port_info.openstack_ports }}"
-      when: item.name is match(regex)
-      vars:
-        regex: "^{{ vm_name }}-NIC-"
-  ignore_errors: true
-  when: port_creation_allow_by_policy|default(true)|bool
+    - name: Extract port info
+      set_fact:
+        nics: " {{ ports | default([]) }}"
+  when: os_migrate_create_network_port|default(true)|bool
+
+- name: Set nics fact for os instance creation
+  set_fact:
+    nics: "net-name={{ openstack_private_network }}"
+  when:
+    - not os_migrate_create_network_port|default(true)|bool
+    - openstack_private_network is defined

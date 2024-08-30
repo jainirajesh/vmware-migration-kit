@@ -37,7 +37,7 @@
 
 - name: Extract mac address
   set_fact:
-    guest_mac: "{{ guest_mac | default([]) + [item.mac_addr] }}"
+    guest_mac: "{{ guest_mac | default([]) + [{'mac': item.mac_addr}] }}"
   loop: "{{ network_info.network_info }}"
   when: not used_mapped_networks|default(true)|bool
 

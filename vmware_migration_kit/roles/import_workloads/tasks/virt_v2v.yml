@@ -8,6 +8,11 @@
   ansible.builtin.shell: |
     echo "{{ vcenter_password }}" > /tmp/passwd
 
+- name: Make sure virtqemud is started
+  ansible.builtin.service:
+    name: virtqemud-ro.socket
+    state: started
+
 - name: Import VMware volume to Openstack
   environment:
     OS_CLOUD: "{{ dst_cloud }}"

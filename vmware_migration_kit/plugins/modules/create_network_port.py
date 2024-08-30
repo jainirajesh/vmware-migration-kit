@@ -1,6 +1,4 @@
 #!/usr/bin/python
-#!/usr/bin/python
-
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
@@ -177,7 +175,7 @@ def main():
             result['changed'] = True
         result["ports"] = port_uuid
     except Exception as e:
-        module.fail_json(msg=f"Failed to create or list ports: {str(e)}")
+        module.fail_json(msg=f"Failed to create  ports: {str(e)}")
 
     module.exit_json(**result)
 
